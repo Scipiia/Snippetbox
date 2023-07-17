@@ -87,7 +87,7 @@ func (q *Queries) ListSnippets(ctx context.Context, arg ListSnippetsParams) ([]S
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Snippet
+	items := []Snippet{}
 	for rows.Next() {
 		var i Snippet
 		if err := rows.Scan(
