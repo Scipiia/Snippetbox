@@ -186,8 +186,6 @@ func TestCreateAccountAPI(t *testing.T) {
 			request, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(data))
 			require.NoError(t, err)
 
-			//fmt.Println("req", request)
-
 			server.router.ServeHTTP(recorder, request)
 
 			tc.checkResponse(t, recorder)
