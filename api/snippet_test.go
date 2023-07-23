@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang/mock/gomock"
@@ -296,7 +295,6 @@ func randomSnippet() db.Snippet {
 		AccountID: int32(util.RandomInt(1, 1000)),
 		Title:     util.RandomString(5),
 		Content:   util.RandomString(10),
-		Created:   time.Now().Local(),
 	}
 }
 

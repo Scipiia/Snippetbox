@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang/mock/gomock"
@@ -356,7 +355,6 @@ func randomAccount() db.Account {
 		ID:       int32(util.RandomInt(1, 1000)),
 		Login:    util.RandomUser(),
 		Username: util.RandomUser(),
-		Created:  time.Now().Local(),
 	}
 }
 
