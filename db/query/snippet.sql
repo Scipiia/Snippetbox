@@ -1,6 +1,6 @@
 -- name: CreateSnippet :one
 INSERT INTO snippets (
-  user_id,
+  account_id,
   title,
   content
 ) VALUES (
@@ -14,7 +14,7 @@ WHERE id = $1 LIMIT 1;
 
 -- name: ListSnippets :many
 SELECT * FROM snippets
-WHERE user_id = $1
+WHERE account_id = $1
 ORDER BY id
 LIMIT $2
 OFFSET $3;

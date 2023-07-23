@@ -10,18 +10,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func createRandomSnippet(t *testing.T, user User) Snippet {
+func createRandomSnippet(t *testing.T, account Account) Snippet {
 	arg := CreateSnippetParams{
-		UserID:  user.ID,
-		Title:   util.RandomTitle(),
-		Content: util.RandomContent(),
+		AccountID: account.ID,
+		Title:     util.RandomTitle(),
+		Content:   util.RandomContent(),
 	}
 
 	snippet, err := testQueries.CreateSnippet(context.Background(), arg)
 	require.NoError(t, err)
 	require.NotEmpty(t, snippet)
 
-	require.Equal(t, arg.UserID, snippet.UserID)
+	require.Equal(t, arg.AccountID, snippet.AccountID)
 	require.Equal(t, arg.Title, snippet.Title)
 	require.Equal(t, arg.Content, snippet.Content)
 
@@ -32,34 +32,34 @@ func createRandomSnippet(t *testing.T, user User) Snippet {
 }
 
 func TestCreateSnippet(t *testing.T) {
-	user := createRandomUser(t)
+	user := createRandomAccount(t)
 	createRandomSnippet(t, user)
 }
 
 func TestGetSnippet(t *testing.T) {
-	user := createRandomUser(t)
+	user := createRandomAccount(t)
 	snippet1 := createRandomSnippet(t, user)
 	snippet2, err := testQueries.GetSnippet(context.Background(), snippet1.ID)
 	require.NoError(t, err)
 	require.NotEmpty(t, snippet2)
 
 	require.Equal(t, snippet1.ID, snippet2.ID)
-	require.Equal(t, snippet1.UserID, snippet2.UserID)
+	require.Equal(t, snippet1.AccountID, snippet2.AccountID)
 	require.Equal(t, snippet1.Title, snippet2.Title)
 	require.Equal(t, snippet1.Content, snippet2.Content)
 	require.WithinDuration(t, snippet1.Created, snippet2.Created, time.Second)
 }
 
 func TestListSnippet(t *testing.T) {
-	user := createRandomUser(t)
+	account := createRandomAccount(t)
 	for i := 0; i < 10; i++ {
-		createRandomSnippet(t, user)
+		createRandomSnippet(t, account)
 	}
 
 	arg := ListSnippetsParams{
-		UserID: user.ID,
-		Limit:  5,
-		Offset: 5,
+		AccountID: account.ID,
+		Limit:     5,
+		Offset:    5,
 	}
 
 	snippets, err := testQueries.ListSnippets(context.Background(), arg)
@@ -68,12 +68,12 @@ func TestListSnippet(t *testing.T) {
 
 	for _, snippet := range snippets {
 		require.NotEmpty(t, snippet)
-		require.Equal(t, arg.UserID, snippet.UserID)
+		require.Equal(t, arg.AccountID, snippet.AccountID)
 	}
 }
 
 func TestDeleteSnippet(t *testing.T) {
-	user := createRandomUser(t)
+	user := createRandomAccount(t)
 	snippet1 := createRandomSnippet(t, user)
 
 	err := testQueries.DeleteSnippet(context.Background(), snippet1.ID)

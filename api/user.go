@@ -1,112 +1,73 @@
 package api
 
 import (
-	"database/sql"
+	"log"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/lib/pq"
 	db "github.com/scipiia/snippetbox/db/sqlc"
+	"github.com/scipiia/snippetbox/util"
 )
 
-type createAccountRequest struct {
-	Login    string `json:"login" binding:"required"`
-	Username string `json:"username" binding:"required"`
+type createUserRequest struct {
+	Name     string `json:"name" binding:"required,alphanum"`
+	Password string `json:"password" binding:"required,min=6"`
+	FullName string `json:"full_name" binding:"required"`
+	Email    string `json:"email" binding:"required,email"`
+}
+
+// ответ клиенту
+type createUserResponce struct {
+	Name              string    `json:"name"`
+	FullName          string    `json:"full_name"`
+	Email             string    `json:"email"`
+	PasswordChangedAt time.Time `json:"password_changed_at"`
+	Created           time.Time `json:"created"`
 }
 
 func (server *Server) createUser(ctx *gin.Context) {
-	var req createAccountRequest
+	var req createUserRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
 
-	arg := db.CreateUserParams{
-		Login:    req.Login,
-		Username: req.Username,
-	}
-
-	user, err := server.query.CreateUser(ctx, arg)
+	hashedPassword, err := util.HashedPassword(req.Password)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, user)
-}
-
-type getUserRequest struct {
-	ID int32 `uri:"id" binding:"required,min=1"`
-}
-
-func (server *Server) getUser(ctx *gin.Context) {
-	var req getUserRequest
-	if err := ctx.ShouldBindUri(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err))
-		return
+	arg := db.CreateUserParams{
+		Name:           req.Name,
+		HashedPassword: hashedPassword,
+		FullName:       req.FullName,
+		Email:          req.Email,
 	}
 
-	user, err := server.query.GetUser(ctx, req.ID)
+	user, err := server.query.CreateUser(ctx, arg)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			ctx.JSON(http.StatusNotFound, errorResponse(err))
-			return
+		if pqError, ok := err.(*pq.Error); ok {
+			log.Println(pqError.Code.Name())
+			switch pqError.Code.Name() {
+			case "unique_violation":
+				ctx.JSON(http.StatusForbidden, errorResponse(err))
+				return
+			}
 		}
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 
-	//отправляем пустые данные что бы тест провалился
-	//user = db.User{}
-
-	ctx.JSON(http.StatusOK, user)
-}
-
-type deleteUserRequest struct {
-	ID int32 `uri:"id" binding:"required,min=1"`
-}
-
-func (server *Server) deleteUser(ctx *gin.Context) {
-	var req deleteUserRequest
-	if err := ctx.ShouldBindUri(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err))
-		return
+	//скрываем публичный хэш пароль
+	rsp := createUserResponce{
+		Name:              user.Name,
+		FullName:          user.FullName,
+		Email:             user.Email,
+		PasswordChangedAt: user.PasswordChangedAt,
+		Created:           user.Created,
 	}
-
-	err := server.query.DeleteUser(ctx, req.ID)
-	if err != nil {
-		// if err == sql.ErrNoRows {
-		// 	ctx.JSON(http.StatusNotFound, errorResponse(err))
-		// 	return
-		// }
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-		return
-	}
-
-	ctx.JSON(http.StatusOK, nil)
-}
-
-type updateUserRequest struct {
-	ID       int32  `json:"id" binding:"required"`
-	Username string `json:"username" binding:"required"`
-}
-
-func (server *Server) updateUser(ctx *gin.Context) {
-	var req updateUserRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err))
-		return
-	}
-
-	arg := db.UpdateUserParams{
-		ID:       req.ID,
-		Username: req.Username,
-	}
-
-	user, err := server.query.UpdateUser(ctx, arg)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-		return
-	}
-
-	ctx.JSON(http.StatusOK, user)
+	ctx.JSON(http.StatusOK, rsp)
 }

@@ -15,10 +15,20 @@ func NewServer(query db.Store) *Server {
 	server := &Server{query: query}
 	router := gin.Default()
 
+	//user
 	router.POST("/users", server.createUser)
-	router.GET("/users/:id", server.getUser)
-	router.DELETE("/users/:id", server.deleteUser)
-	router.PATCH("/users", server.updateUser)
+
+	//account
+	router.POST("/accounts", server.createAccount)
+	router.GET("/accounts/:id", server.getAccount)
+	router.DELETE("/accounts/:id", server.deleteAccount)
+	router.PATCH("/accounts", server.updateAccount)
+
+	//snippets
+	router.POST("/accounts/snippet", server.createSnippet)
+	router.GET("/accounts/snippet/:id", server.getSnippet)
+	router.GET("/accounts/snippet", server.listSnippets)
+	router.DELETE("/accounts/snippet/:id", server.deleteSnippet)
 
 	server.router = router
 	return server
