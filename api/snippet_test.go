@@ -97,7 +97,7 @@ func TestCreateSbippetAPI(t *testing.T) {
 			store := mockdb.NewMockStore(controller)
 			tc.buildStubs(store)
 
-			server := NewServer(store)
+			server := NewTestServer(t, store)
 			recorder := httptest.NewRecorder()
 
 			//to JSON
@@ -177,7 +177,7 @@ func TestGetSnippetAPI(t *testing.T) {
 			store := mockdb.NewMockStore(controller)
 			tc.buildStubs(store)
 
-			server := NewServer(store)
+			server := NewTestServer(t, store)
 			recorder := httptest.NewRecorder()
 
 			url := fmt.Sprintf("/accounts/snippet/%d", tc.snippetId)
@@ -245,7 +245,7 @@ func TestDeleteSnippetAPI(t *testing.T) {
 			store := mockdb.NewMockStore(controller)
 			tc.buildStubs(store)
 
-			server := NewServer(store)
+			server := NewTestServer(t, store)
 			recorder := httptest.NewRecorder()
 
 			url := fmt.Sprintf("/accounts/snippet/%d", tc.snippetID)

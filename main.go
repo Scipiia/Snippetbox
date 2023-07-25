@@ -29,7 +29,10 @@ func main() {
 	}
 
 	query := db.New(conn)
-	server := api.NewServer(query)
+	server, err := api.NewServer(config, query)
+	if err != nil {
+		log.Fatal("cannot create server", err)
+	}
 
 	err = server.Start(config.ServerAddress)
 	if err != nil {
