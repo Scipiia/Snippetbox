@@ -32,8 +32,8 @@ func createRandomSnippet(t *testing.T, account Account) Snippet {
 }
 
 func TestCreateSnippet(t *testing.T) {
-	user := createRandomAccount(t)
-	createRandomSnippet(t, user)
+	account := createRandomAccount(t)
+	createRandomSnippet(t, account)
 }
 
 func TestGetSnippet(t *testing.T) {
