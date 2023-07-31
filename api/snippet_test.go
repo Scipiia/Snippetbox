@@ -259,35 +259,130 @@ func TestDeleteSnippetAPI(t *testing.T) {
 	}
 }
 
-// func TestListSnippets(t *testing.T) {
-// 	account := randomAccount(t)
+func TestListSnippets(t *testing.T) {
+	user, _ := createRandomUser(t)
+	account := randomAccount(user.Name)
 
-// 	n := 5
-// 	snippets := make([]db.Snippet, n)
-// 	for i := 0; i < n; i++ {
-// 		snippets[i] = randomSnippet()
-// 	}
+	n := 5
+	snippets := make([]db.Snippet, n)
+	for i := 0; i < n; i++ {
+		snippets[i] = randomSnippet()
+	}
 
-// 	type Query struct {
-// 		accountID int
-// 		pageID int
-// 		pageSize int
-// 	}
+	type Query struct {
+		accountID int
+		pageID    int
+		pageSize  int
+	}
 
-// 	testCases := []struct {
-// 		name string
-// 		query Query
-// 		buildStubs    func(store *mockdb.MockStore)
-// 		checkResponse func(t *testing.T, recorder *httptest.ResponseRecorder)
-// 	}{
-// 		{
-// 			name: "OK",
-// 			query: Query{
-// 				accountID: ,
-// 			},
-// 		},
-// 	}
-// }
+	testCases := []struct {
+		name          string
+		query         Query
+		buildStubs    func(store *mockdb.MockStore)
+		checkResponse func(t *testing.T, recorder *httptest.ResponseRecorder)
+	}{
+		{
+			name: "OK",
+			query: Query{
+				accountID: int(account.ID),
+				pageID:    1,
+				pageSize:  n,
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				arg := db.ListSnippetsParams{
+					AccountID: int32(account.ID),
+					Limit:     int32(n),
+					Offset:    0,
+				}
+				store.EXPECT().
+					ListSnippets(gomock.Any(), gomock.Eq(arg)).
+					Times(1).Return(snippets, nil)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, recorder.Code)
+				requireBodyMatchSnippets(t, recorder.Body, snippets)
+			},
+		},
+		{
+			name: "InternalError",
+			query: Query{
+				accountID: int(account.ID),
+				pageID:    1,
+				pageSize:  n,
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					ListSnippets(gomock.Any(), gomock.Any()).
+					Times(1).Return([]db.Snippet{}, sql.ErrConnDone)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
+		{
+			name: "InvalidPageID",
+			query: Query{
+				accountID: int(account.ID),
+				pageID:    -1,
+				pageSize:  n,
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					ListSnippets(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+			},
+		},
+		{
+			name: "InvalidPageSize",
+			query: Query{
+				accountID: int(account.ID),
+				pageID:    1,
+				pageSize:  100000,
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					ListSnippets(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+			},
+		},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+
+		t.Run(tc.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			store := mockdb.NewMockStore(controller)
+			tc.buildStubs(store)
+
+			server := NewTestServer(t, store)
+			recorder := httptest.NewRecorder()
+
+			url := "/accounts/snippet"
+			request, err := http.NewRequest(http.MethodGet, url, nil)
+			require.NoError(t, err)
+
+			// Add query parameters to request URL
+			q := request.URL.Query()
+			q.Add("account_id", fmt.Sprintf("%d", tc.query.accountID))
+			q.Add("page_id", fmt.Sprintf("%d", tc.query.pageID))
+			q.Add("page_size", fmt.Sprintf("%d", tc.query.pageSize))
+			request.URL.RawQuery = q.Encode()
+
+			server.router.ServeHTTP(recorder, request)
+
+			tc.checkResponse(t, recorder)
+		})
+	}
+}
 
 func randomSnippet() db.Snippet {
 	return db.Snippet{
@@ -306,4 +401,14 @@ func requireBodyMatchSnippet(t *testing.T, body *bytes.Buffer, snippet db.Snippe
 	err = json.Unmarshal(data, &gotSnippet)
 	require.NoError(t, err)
 	require.Equal(t, snippet, gotSnippet)
+}
+
+func requireBodyMatchSnippets(t *testing.T, body *bytes.Buffer, snippets []db.Snippet) {
+	data, err := ioutil.ReadAll(body)
+	require.NoError(t, err)
+
+	var gotSnippets []db.Snippet
+	err = json.Unmarshal(data, &gotSnippets)
+	require.NoError(t, err)
+	require.Equal(t, snippets, gotSnippets)
 }

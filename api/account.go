@@ -2,16 +2,18 @@ package api
 
 import (
 	"database/sql"
+	"errors"
 	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/lib/pq"
 	db "github.com/scipiia/snippetbox/db/sqlc"
+	"github.com/scipiia/snippetbox/token"
 )
 
 type createAccountRequest struct {
-	Login    string `json:"login" binding:"required"`
+	//Login    string `json:"login" binding:"required"`
 	Username string `json:"username" binding:"required"`
 }
 
@@ -22,8 +24,11 @@ func (server *Server) createAccount(ctx *gin.Context) {
 		return
 	}
 
+	//получаем данные из токена
+	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+
 	arg := db.CreateAccountParams{
-		Login:    req.Login,
+		Login:    authPayload.Name,
 		Username: req.Username,
 	}
 
@@ -50,7 +55,7 @@ func (server *Server) getAccount(ctx *gin.Context) {
 		return
 	}
 
-	user, err := server.query.GetAccount(ctx, req.ID)
+	account, err := server.query.GetAccount(ctx, req.ID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			ctx.JSON(http.StatusNotFound, errorResponse(err))
@@ -60,10 +65,14 @@ func (server *Server) getAccount(ctx *gin.Context) {
 		return
 	}
 
-	//отправляем пустые данные что бы тест провалился
-	//user = db.User{}
+	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+	if account.Login != authPayload.Name {
+		err := errors.New("account doesn't belong to the authenticated user")
+		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
+		return
+	}
 
-	ctx.JSON(http.StatusOK, user)
+	ctx.JSON(http.StatusOK, account)
 }
 
 type deleteAccountRequest struct {
@@ -79,10 +88,6 @@ func (server *Server) deleteAccount(ctx *gin.Context) {
 
 	err := server.query.DeleteAccount(ctx, req.ID)
 	if err != nil {
-		// if err == sql.ErrNoRows {
-		// 	ctx.JSON(http.StatusNotFound, errorResponse(err))
-		// 	return
-		// }
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
