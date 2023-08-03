@@ -12,7 +12,7 @@ packages:
   - name: "db"
     path: "./db/sqlc"
     queries: "./db/query/"
-    schema: "./db/migrate/"
+    schema: "./db/migration/"
     engine: "postgresql"
     emit_prepared_queries: false
     emit_interface: true
