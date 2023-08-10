@@ -28,23 +28,6 @@ func NewServer(config util.Config, query db.Store) (*Server, error) {
 		query:      query,
 		tokenMaker: tokenMaker,
 	}
-	// router := gin.Default()
-
-	// //user
-	// router.POST("/users", server.createUser)
-	// router.POST("/users/login", server.loginUser)
-
-	// //account
-	// router.POST("/accounts", server.createAccount)
-	// router.GET("/accounts/:id", server.getAccount)
-	// router.DELETE("/accounts/:id", server.deleteAccount)
-	// router.PATCH("/accounts", server.updateAccount)
-
-	// //snippets
-	// router.POST("/accounts/snippet", server.createSnippet)
-	// router.GET("/accounts/snippet/:id", server.getSnippet)
-	// router.GET("/accounts/snippet", server.listSnippets)
-	// router.DELETE("/accounts/snippet/:id", server.deleteSnippet)
 
 	server.setupRouter()
 	return server, nil
