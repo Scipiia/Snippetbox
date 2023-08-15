@@ -39,8 +39,8 @@ func main() {
 
 	query := db.New(conn)
 
-	go runGatewayServer(config, query)
-	runGrpcServer(config, query)
+	go runGrpcServer(config, query)
+	runGatewayServer(config, query)
 }
 
 func runGrpcServer(config util.Config, query db.Store) {
@@ -54,13 +54,13 @@ func runGrpcServer(config util.Config, query db.Store) {
 	reflection.Register(grpcServer)
 	listener, err := net.Listen("tcp", config.GRPCServerAddress)
 	if err != nil {
-		log.Fatal("cannot create listener")
+		log.Fatal("cannot create listener", err)
 	}
 
 	log.Printf("start gRPC server at %s", listener.Addr().String())
 	err = grpcServer.Serve(listener)
 	if err != nil {
-		log.Fatal("cannot start gRPC server")
+		log.Fatal("cannot start gRPC server", err)
 	}
 }
 
@@ -85,21 +85,25 @@ func runGatewayServer(config util.Config, query db.Store) {
 
 	err = pb.RegisterSnippetboxHandlerServer(ctx, grpcMux, server)
 	if err != nil {
-		log.Fatal("cannot register handler server")
+		log.Fatal("cannot register handler server", err)
 	}
 
 	mux := http.NewServeMux()
 	mux.Handle("/", grpcMux)
 
+	//static swagger files
+	fs := http.FileServer(http.Dir("./doc/swagger"))
+	mux.Handle("/swagger/", http.StripPrefix("/swagger/", fs))
+
 	listener, err := net.Listen("tcp", config.HTTPServerAddress)
 	if err != nil {
-		log.Fatal("cannot create listener")
+		log.Fatal("cannot create HTTP gateway listener", err)
 	}
 
 	log.Printf("start HTTP  gateway server at %s", listener.Addr().String())
 	err = http.Serve(listener, mux)
 	if err != nil {
-		log.Fatal("cannot start HTTP gateway server")
+		log.Fatal("cannot start HTTP gateway server", err)
 	}
 }
 
