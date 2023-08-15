@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"log"
 	"net"
+	"net/http"
 
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/scipiia/snippetbox/api"
 	db "github.com/scipiia/snippetbox/db/sqlc"
 	"github.com/scipiia/snippetbox/gapi"
@@ -12,6 +15,7 @@ import (
 	"github.com/scipiia/snippetbox/util"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
+	"google.golang.org/protobuf/encoding/protojson"
 
 	_ "github.com/lib/pq"
 )
@@ -34,6 +38,8 @@ func main() {
 	}
 
 	query := db.New(conn)
+
+	go runGatewayServer(config, query)
 	runGrpcServer(config, query)
 }
 
@@ -55,6 +61,45 @@ func runGrpcServer(config util.Config, query db.Store) {
 	err = grpcServer.Serve(listener)
 	if err != nil {
 		log.Fatal("cannot start gRPC server")
+	}
+}
+
+func runGatewayServer(config util.Config, query db.Store) {
+	server, err := gapi.NewServer(config, query)
+	if err != nil {
+		log.Fatal("cannot create server", err)
+	}
+
+	jsonOption := runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.JSONPb{
+		MarshalOptions: protojson.MarshalOptions{
+			UseProtoNames: true,
+		},
+		UnmarshalOptions: protojson.UnmarshalOptions{
+			DiscardUnknown: true,
+		},
+	})
+
+	grpcMux := runtime.NewServeMux(jsonOption)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	err = pb.RegisterSnippetboxHandlerServer(ctx, grpcMux, server)
+	if err != nil {
+		log.Fatal("cannot register handler server")
+	}
+
+	mux := http.NewServeMux()
+	mux.Handle("/", grpcMux)
+
+	listener, err := net.Listen("tcp", config.HTTPServerAddress)
+	if err != nil {
+		log.Fatal("cannot create listener")
+	}
+
+	log.Printf("start HTTP  gateway server at %s", listener.Addr().String())
+	err = http.Serve(listener, mux)
+	if err != nil {
+		log.Fatal("cannot start HTTP gateway server")
 	}
 }
 
