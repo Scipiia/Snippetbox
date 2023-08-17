@@ -7,12 +7,19 @@ import (
 	db "github.com/scipiia/snippetbox/db/sqlc"
 	"github.com/scipiia/snippetbox/pb"
 	"github.com/scipiia/snippetbox/util"
+	"github.com/scipiia/snippetbox/validation"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func (server *Server) LoginUser(ctx context.Context, req *pb.LoginUserRequest) (*pb.LoginUserResponse, error) {
+
+	violations := validateLoginUserRequest(req)
+	if violations != nil {
+		return nil, invalidArgumentError(violations)
+	}
 
 	user, err := server.query.GetUser(ctx, req.GetName())
 	if err != nil {
@@ -75,4 +82,16 @@ func (server *Server) LoginUser(ctx context.Context, req *pb.LoginUserRequest) (
 	}
 
 	return rsp, nil
+}
+
+func validateLoginUserRequest(req *pb.LoginUserRequest) (validations []*errdetails.BadRequest_FieldViolation) {
+	if err := validation.ValidateName(req.GetName()); err != nil {
+		validations = append(validations, fieldValidation("name", err))
+	}
+
+	if err := validation.ValidatePassword(req.GetPassword()); err != nil {
+		validations = append(validations, fieldValidation("password", err))
+	}
+
+	return validations
 }
