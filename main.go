@@ -8,8 +8,10 @@ import (
 	"net/http"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/rakyll/statik/fs"
 	"github.com/scipiia/snippetbox/api"
 	db "github.com/scipiia/snippetbox/db/sqlc"
+	_ "github.com/scipiia/snippetbox/doc/statik"
 	"github.com/scipiia/snippetbox/gapi"
 	"github.com/scipiia/snippetbox/pb"
 	"github.com/scipiia/snippetbox/util"
@@ -38,9 +40,9 @@ func main() {
 	}
 
 	query := db.New(conn)
-
 	go runGrpcServer(config, query)
 	runGatewayServer(config, query)
+	//runGinServer(config, query)
 }
 
 func runGrpcServer(config util.Config, query db.Store) {
@@ -92,8 +94,14 @@ func runGatewayServer(config util.Config, query db.Store) {
 	mux.Handle("/", grpcMux)
 
 	//static swagger files
-	fs := http.FileServer(http.Dir("./doc/swagger"))
-	mux.Handle("/swagger/", http.StripPrefix("/swagger/", fs))
+	//fs := http.FileServer(http.Dir("./doc/swagger"))
+	statikFs, err := fs.New()
+	if err != nil {
+		log.Fatal("cannot create statik fs:", err)
+	}
+
+	swaggerHandler := http.StripPrefix("/swagger/", http.FileServer(statikFs))
+	mux.Handle("/swagger/", swaggerHandler)
 
 	listener, err := net.Listen("tcp", config.HTTPServerAddress)
 	if err != nil {
