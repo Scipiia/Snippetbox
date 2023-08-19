@@ -45,8 +45,8 @@ func main() {
 	runDBMigration(config.MigrationURL, config.DBSource)
 
 	query := db.New(conn)
-	runGrpcServer(config, query)
-	go runGatewayServer(config, query)
+	go runGrpcServer(config, query)
+	runGatewayServer(config, query)
 	//runGinServer(config, query)
 }
 
