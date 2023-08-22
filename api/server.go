@@ -18,14 +18,14 @@ type Server struct {
 }
 
 // *db.Queries change on db.Store mock db
-func NewServer(config util.Config, query db.Store) (*Server, error) {
+func NewServer(config util.Config, store db.Store) (*Server, error) {
 	tokenMaker, err := token.NewPasetoMaker(config.TokenSymmetricKye)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create token maker: %w", err)
 	}
 	server := &Server{
 		config:     config,
-		query:      query,
+		query:      store,
 		tokenMaker: tokenMaker,
 	}
 
