@@ -21,7 +21,7 @@ func (server *Server) LoginUser(ctx context.Context, req *pb.LoginUserRequest) (
 		return nil, invalidArgumentError(violations)
 	}
 
-	user, err := server.query.GetUser(ctx, req.GetName())
+	user, err := server.store.GetUser(ctx, req.GetName())
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, status.Errorf(codes.NotFound, "name not found")
@@ -59,7 +59,7 @@ func (server *Server) LoginUser(ctx context.Context, req *pb.LoginUserRequest) (
 	mtdt := server.extractMetadata(ctx)
 
 	//create session to db
-	session, err := server.query.CreateSession(ctx, db.CreateSessionParams{
+	session, err := server.store.CreateSession(ctx, db.CreateSessionParams{
 		ID:           refreshPayload.ID,
 		Name:         user.Name,
 		RefreshToken: refreshToken,
