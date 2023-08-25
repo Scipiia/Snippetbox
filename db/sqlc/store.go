@@ -37,7 +37,6 @@ func (store *SQLStore) execTx(ctx context.Context, fn func(*Queries) error) erro
 		}
 		return err
 	}
+
 	return tx.Commit()
 }
-
-//func (store *Store) TransferTx
