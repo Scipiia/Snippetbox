@@ -1,14 +1,25 @@
 -- SQL dump generated using DBML (dbml-lang.org)
 -- Database: PostgreSQL
--- Generated at: 2023-08-03T08:18:56.743Z
+-- Generated at: 2023-08-28T02:51:04.595Z
 
-CREATE TABLE "user" (
+CREATE TABLE "users" (
   "name" varchar PRIMARY KEY,
   "hashed_password" varchar NOT NULL,
   "full_name" varchar NOT NULL,
   "email" varchar UNIQUE NOT NULL,
+  "is_email_verified" bool NOT NULL DEFAULT false,
   "password_changed_at" timestamptz NOT NULL DEFAULT '0001-01-01 00:00:00Z',
   "created" timestamptz NOT NULL DEFAULT 'now()'
+);
+
+CREATE TABLE "verify_emails" (
+  "id" bigserial PRIMARY KEY,
+  "name" varchar NOT NULL,
+  "email" varchar NOT NULL,
+  "secret_code" varchar NOT NULL,
+  "is_used_sc" bool NOT NULL DEFAULT false,
+  "created_at" timestamptz NOT NULL DEFAULT (now()),
+  "expired_at" timestamptz NOT NULL DEFAULT (now() + interval '15 minutes')
 );
 
 CREATE TABLE "account" (
@@ -38,8 +49,10 @@ CREATE TABLE "session" (
   "created" timestamptz NOT NULL DEFAULT 'now()'
 );
 
-ALTER TABLE "account" ADD FOREIGN KEY ("account_id") REFERENCES "user" ("name");
+ALTER TABLE "verify_emails" ADD FOREIGN KEY ("name") REFERENCES "users" ("name");
+
+ALTER TABLE "account" ADD FOREIGN KEY ("account_id") REFERENCES "users" ("name");
 
 ALTER TABLE "snippets" ADD FOREIGN KEY ("user_id") REFERENCES "account" ("id");
 
-ALTER TABLE "session" ADD FOREIGN KEY ("name") REFERENCES "user" ("name");
+ALTER TABLE "session" ADD FOREIGN KEY ("name") REFERENCES "users" ("name");

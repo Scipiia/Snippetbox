@@ -20,6 +20,7 @@ import (
 	db "github.com/scipiia/snippetbox/db/sqlc"
 	_ "github.com/scipiia/snippetbox/doc/statik"
 	"github.com/scipiia/snippetbox/gapi"
+	"github.com/scipiia/snippetbox/mail"
 	"github.com/scipiia/snippetbox/pb"
 	"github.com/scipiia/snippetbox/util"
 	"github.com/scipiia/snippetbox/worker"
@@ -62,7 +63,7 @@ func main() {
 	}
 
 	taskDistributer := worker.NewRedisTaskDistributor(redisOpt)
-	go runTaskProcessor(redisOpt, store)
+	go runTaskProcessor(config, redisOpt, store)
 
 	go runGrpcServer(config, store, taskDistributer)
 	runGatewayServer(config, store, taskDistributer)
@@ -84,8 +85,9 @@ func runDBMigration(migrationURL string, dbSource string) {
 }
 
 // run processor redis
-func runTaskProcessor(redisOpt asynq.RedisClientOpt, store db.Store) {
-	taskProcessor := worker.NewRedisTaskProcessor(redisOpt, store)
+func runTaskProcessor(config util.Config, redisOpt asynq.RedisClientOpt, store db.Store) {
+	mailer := mail.NewGmailSender(config.EmailSenderName, config.EmailSenderAddress, config.EmailSenderPassword)
+	taskProcessor := worker.NewRedisTaskProcessor(redisOpt, store, mailer)
 	log.Info().Msg("start task processor")
 	err := taskProcessor.Start()
 	if err != nil {

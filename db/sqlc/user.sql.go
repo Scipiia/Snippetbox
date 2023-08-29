@@ -19,7 +19,7 @@ INSERT INTO users (
 ) VALUES (
   $1, $2, $3, $4
 )
-RETURNING name, hashed_password, full_name, email, password_changed_at, created
+RETURNING name, hashed_password, full_name, email, password_changed_at, created, is_email_verified
 `
 
 type CreateUserParams struct {
@@ -44,12 +44,13 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.Email,
 		&i.PasswordChangedAt,
 		&i.Created,
+		&i.IsEmailVerified,
 	)
 	return i, err
 }
 
 const getUser = `-- name: GetUser :one
-SELECT name, hashed_password, full_name, email, password_changed_at, created FROM users 
+SELECT name, hashed_password, full_name, email, password_changed_at, created, is_email_verified FROM users 
 WHERE name = $1 LIMIT 1
 `
 
@@ -63,6 +64,7 @@ func (q *Queries) GetUser(ctx context.Context, name string) (User, error) {
 		&i.Email,
 		&i.PasswordChangedAt,
 		&i.Created,
+		&i.IsEmailVerified,
 	)
 	return i, err
 }
@@ -76,7 +78,7 @@ SET
   email=COALESCE($4, email)
 WHERE
   name = $5
-RETURNING name, hashed_password, full_name, email, password_changed_at, created
+RETURNING name, hashed_password, full_name, email, password_changed_at, created, is_email_verified
 `
 
 type UpdateUserParams struct {
@@ -103,6 +105,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.Email,
 		&i.PasswordChangedAt,
 		&i.Created,
+		&i.IsEmailVerified,
 	)
 	return i, err
 }
